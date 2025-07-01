@@ -1,20 +1,32 @@
-beautifulsoup4
-docx2txt
-langchain
-langchain_community
-langchain_text_splitters
+# ComfyUI Volcano API Plugin Requirements
+
 # 核心依赖
 openai>=1.0.0
 requests>=2.25.0
 Pillow>=8.0.0
 numpy>=1.19.0
 
-# 可选依赖（根据需要）
-# opencv-python>=4.5.0  # 视频处理
-# torch>=1.9.0  # 如果需要tensor处理
+# 文本处理依赖
+beautifulsoup4
+docx2txt
 openpyxl
 pandas
+xlrd
+
+# LangChain相关
+langchain
+langchain_community
+langchain_text_splitters
+
+# 向量搜索
+faiss-cpu
+
+# 时区处理
 pytz
+
+# 可选依赖（根据需要取消注释）
+# opencv-python>=4.5.0  # 视频处理
+# torch>=1.9.0  # 如果需要tensor处理
 Requests>=2.25.0
 xlrd
 faiss-cpu
