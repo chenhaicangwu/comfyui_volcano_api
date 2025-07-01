@@ -143,17 +143,6 @@ class VolcanoChat:
                            model: str = None) -> Tuple[str, Dict[str, Any]]:
         """
         多模态内容生成
-        
-        Args:
-            content_list: 内容列表，每个元素包含type和content
-            system_prompt: 系统提示
-            max_tokens: 最大token数
-            temperature: 温度参数
-            top_p: top_p参数
-            model: 模型名称（REST API模式必需）
-            
-        Returns:
-            生成的文本和响应信息
         """
         try:
             messages = self._prepare_messages(content_list, system_prompt)
@@ -162,8 +151,9 @@ class VolcanoChat:
                 # 使用OpenAI客户端
                 model_name = self.endpoint_id or model
                 if not model_name:
-                    raise ValueError("OpenAPI模式需要提供endpoint_id或model参数")
+                    raise ValueError("OpenAPI模式需要在VolcanoLLMLoader中提供endpoint_id")
                 
+                logger.info(f"调用OpenAPI，模型: {model_name}")
                 response = self.client.chat.completions.create(
                     model=model_name,
                     messages=messages,
@@ -200,7 +190,8 @@ class VolcanoChat:
                 }
                 
                 url = f"{self.base_url}/chat/completions"
-                response = requests.post(url, headers=headers, json=request_data)
+                logger.info(f"调用REST API: {url}")
+                response = requests.post(url, headers=headers, json=request_data, timeout=30)
                 response.raise_for_status()
                 
                 response_json = response.json()
@@ -214,6 +205,9 @@ class VolcanoChat:
             
         except Exception as e:
             logger.error(f"多模态生成失败: {str(e)}")
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"HTTP状态码: {e.response.status_code}")
+                logger.error(f"响应内容: {e.response.text}")
             raise RuntimeError(f"火山引擎API调用失败: {str(e)}")
 
 
@@ -280,7 +274,6 @@ class VolcanoMultiModalInput:
                 "image_input": ("IMAGE",),
                 "video_input": ("STRING", {"default": ""}),  # 视频路径或URL
                 "system_prompt": ("STRING", {"multiline": True, "default": ""}),
-                "model": ("STRING", {"default": ""}),  # REST API模式需要
                 "max_tokens": ("INT", {"default": 1024, "min": 1, "max": 4096}),
                 "temperature": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 2.0, "step": 0.1}),
                 "top_p": ("FLOAT", {"default": 0.9, "min": 0.0, "max": 1.0, "step": 0.05}),
@@ -293,7 +286,7 @@ class VolcanoMultiModalInput:
     CATEGORY = "🌋火山引擎/多模态"
     
     def process(self, chat, text_input="", image_input=None, video_input="", 
-                system_prompt="", model="", max_tokens=1024, temperature=0.7, top_p=0.9):
+                system_prompt="", max_tokens=1024, temperature=0.7, top_p=0.9):
         try:
             # 构建内容列表
             content_list = []
@@ -310,21 +303,19 @@ class VolcanoMultiModalInput:
             if not content_list:
                 raise ValueError("至少需要提供一种输入内容")
             
-            # 调用API
+            # 调用API - 移除model参数，让VolcanoChat使用endpoint_id
             response_text, response_info = chat.generate_multimodal(
                 content_list=content_list,
                 system_prompt=system_prompt,
                 max_tokens=max_tokens,
                 temperature=temperature,
-                top_p=top_p,
-                model=model
+                top_p=top_p
             )
             
             # 处理输出
             info_json = json.dumps(response_info, ensure_ascii=False, indent=2)
             
             # 目前主要返回文本，图片和视频输出需要根据API响应格式调整
-            # 这里先返回空值，实际实现需要根据火山引擎API的具体响应格式
             empty_image = None  # 需要创建空白图片tensor
             empty_video = ""
             
@@ -332,7 +323,15 @@ class VolcanoMultiModalInput:
             
         except Exception as e:
             logger.error(f"多模态处理失败: {str(e)}")
-            raise RuntimeError(f"处理失败: {str(e)}")
+            # 提供更详细的错误信息
+            if "Connection error" in str(e):
+                raise RuntimeError(f"连接失败: 请检查网络连接和API配置。详细错误: {str(e)}")
+            elif "401" in str(e) or "Unauthorized" in str(e):
+                raise RuntimeError(f"认证失败: 请检查API Key是否正确。详细错误: {str(e)}")
+            elif "404" in str(e):
+                raise RuntimeError(f"端点不存在: 请检查endpoint_id是否正确。详细错误: {str(e)}")
+            else:
+                raise RuntimeError(f"处理失败: {str(e)}")
 
 
 # 简化的文本专用节点（向后兼容）
