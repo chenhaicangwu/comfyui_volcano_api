@@ -299,6 +299,3 @@ def manage_discord_packages():
         install_package("py-cord[voice]")
     else:
         print("py-cord[voice] is already installed")
-
-
-
