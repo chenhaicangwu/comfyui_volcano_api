@@ -86,15 +86,22 @@ class VolcanoChat:
                     }
                 }
             else:  # REST API 模式
-                # 构建请求体
+                # 构建 REST API 请求体
                 request_data = {
-                    "messages": messages,
-                    "max_tokens": max_tokens,
-                    "temperature": temperature,
-                    "top_p": top_p
+                    # 火山引擎 REST API 必需参数
+                    "Action": "ChatCompletion",
+                    "Version": "2023-05-01",
+                    # 模型参数
+                    "EndpointId": self.endpoint_id,
+                    "Parameters": {
+                        "messages": messages,
+                        "max_tokens": max_tokens,
+                        "temperature": temperature,
+                        "top_p": top_p
+                    }
                 }
                 if stop:
-                    request_data["stop"] = stop
+                    request_data["Parameters"]["stop"] = stop
                 
                 # 发送 REST API 请求
                 headers = {
@@ -102,10 +109,13 @@ class VolcanoChat:
                     "Content-Type": "application/json"
                 }
                 
-                # 构建完整的 URL
-                url = f"{self.base_url}/v1/completions"
+                # 构建完整的 URL，REST API 不需要添加路径
+                url = self.base_url
                 if not url.startswith("http"):
                     url = f"https://{url}"
+                
+                logger.info(f"发送 REST API 请求到: {url}")
+                logger.info(f"请求参数: Action={request_data['Action']}, Version={request_data['Version']}, EndpointId={request_data['EndpointId']}")
                 
                 response = requests.post(url, headers=headers, json=request_data)
                 
@@ -170,16 +180,23 @@ class VolcanoChat:
                 
                 return response
             else:  # REST API 模式
-                # 构建请求体
+                # 构建 REST API 流式请求体
                 request_data = {
-                    "messages": messages,
-                    "max_tokens": max_tokens,
-                    "temperature": temperature,
-                    "top_p": top_p,
-                    "stream": True
+                    # 火山引擎 REST API 必需参数
+                    "Action": "ChatCompletion",
+                    "Version": "2023-05-01",
+                    # 模型参数
+                    "EndpointId": self.endpoint_id,
+                    "Parameters": {
+                        "messages": messages,
+                        "max_tokens": max_tokens,
+                        "temperature": temperature,
+                        "top_p": top_p,
+                        "stream": True
+                    }
                 }
                 if stop:
-                    request_data["stop"] = stop
+                    request_data["Parameters"]["stop"] = stop
                 
                 # 发送 REST API 流式请求
                 headers = {
@@ -187,10 +204,13 @@ class VolcanoChat:
                     "Content-Type": "application/json"
                 }
                 
-                # 构建完整的 URL
-                url = f"{self.base_url}/v1/completions"
+                # 构建完整的 URL，REST API 不需要添加路径
+                url = self.base_url
                 if not url.startswith("http"):
                     url = f"https://{url}"
+                
+                logger.info(f"发送 REST API 流式请求到: {url}")
+                logger.info(f"请求参数: Action={request_data['Action']}, Version={request_data['Version']}, EndpointId={request_data['EndpointId']}")
                 
                 response = requests.post(url, headers=headers, json=request_data, stream=True)
                 
@@ -330,22 +350,30 @@ class VolcanoLLMLoader:
                     headers={"Authorization": f"Bearer {chat.api_key}"}
                 )
             else:  # REST API 模式
-                # 构建测试请求
+                # 构建 REST API 测试请求
                 headers = {
                     "Authorization": f"Bearer {chat.api_key}",
                     "Content-Type": "application/json"
                 }
                 
-                # 构建完整的 URL
-                url = f"{chat.base_url}v1/completions"
+                # 构建完整的 URL，REST API 不需要添加路径
+                url = chat.base_url
                 if not url.startswith("http"):
                     url = f"https://{url}"
                 
-                # 发送一个简单的测试请求
+                # 发送一个简单的测试请求，包含必要的 Action 和 Version 参数
                 test_data = {
-                    "messages": [{"role": "user", "content": "测试连接"}],
-                    "max_tokens": 5
+                    "Action": "ChatCompletion",
+                    "Version": "2023-05-01",
+                    "EndpointId": chat.endpoint_id,
+                    "Parameters": {
+                        "messages": [{"role": "user", "content": "测试连接"}],
+                        "max_tokens": 5
+                    }
                 }
+                
+                logger.info(f"发送 REST API 测试请求到: {url}")
+                logger.info(f"测试请求参数: Action={test_data['Action']}, Version={test_data['Version']}, EndpointId={test_data['EndpointId']}")
                 
                 response = requests.post(url, headers=headers, json=test_data)
             
