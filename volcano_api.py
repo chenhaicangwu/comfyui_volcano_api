@@ -86,22 +86,16 @@ class VolcanoChat:
                     }
                 }
             else:  # REST API 模式
-                # 构建 REST API 请求体
+                # 构建 REST API 请求体，基于用户提供的curl示例
                 request_data = {
-                    # 火山引擎 REST API 必需参数
-                    "Action": "ChatCompletion",
-                    "Version": "2023-05-01",
-                    # 模型参数
-                    "EndpointId": self.endpoint_id,
-                    "Parameters": {
-                        "messages": messages,
-                        "max_tokens": max_tokens,
-                        "temperature": temperature,
-                        "top_p": top_p
-                    }
+                    "model": self.endpoint_id,
+                    "messages": messages,
+                    "max_tokens": max_tokens,
+                    "temperature": temperature,
+                    "top_p": top_p
                 }
                 if stop:
-                    request_data["Parameters"]["stop"] = stop
+                    request_data["stop"] = stop
                 
                 # 发送 REST API 请求
                 headers = {
@@ -109,8 +103,12 @@ class VolcanoChat:
                     "Content-Type": "application/json"
                 }
                 
-                # 构建完整的 URL，REST API 不需要添加路径
+                # 构建完整的 URL，REST API 模式使用 chat/completions 路径
                 url = self.base_url
+                if not url.endswith("/"):
+                    url += "/"
+                if "chat/completions" not in url:
+                    url += "chat/completions"
                 if not url.startswith("http"):
                     url = f"https://{url}"
                 
@@ -180,23 +178,17 @@ class VolcanoChat:
                 
                 return response
             else:  # REST API 模式
-                # 构建 REST API 流式请求体
+                # 构建 REST API 流式请求体，基于用户提供的curl示例
                 request_data = {
-                    # 火山引擎 REST API 必需参数
-                    "Action": "ChatCompletion",
-                    "Version": "2023-05-01",
-                    # 模型参数
-                    "EndpointId": self.endpoint_id,
-                    "Parameters": {
-                        "messages": messages,
-                        "max_tokens": max_tokens,
-                        "temperature": temperature,
-                        "top_p": top_p,
-                        "stream": True
-                    }
+                    "model": self.endpoint_id,
+                    "messages": messages,
+                    "max_tokens": max_tokens,
+                    "temperature": temperature,
+                    "top_p": top_p,
+                    "stream": True
                 }
                 if stop:
-                    request_data["Parameters"]["stop"] = stop
+                    request_data["stop"] = stop
                 
                 # 发送 REST API 流式请求
                 headers = {
@@ -204,8 +196,12 @@ class VolcanoChat:
                     "Content-Type": "application/json"
                 }
                 
-                # 构建完整的 URL，REST API 不需要添加路径
+                # 构建完整的 URL，REST API 模式使用 chat/completions 路径
                 url = self.base_url
+                if not url.endswith("/"):
+                    url += "/"
+                if "chat/completions" not in url:
+                    url += "chat/completions"
                 if not url.startswith("http"):
                     url = f"https://{url}"
                 
@@ -281,9 +277,9 @@ class VolcanoLLMLoader:
             else:
                 # 根据 API 模式选择默认的基础 URL
                 if api_mode_enum == APIMode.OPENAPI:
-                    base_url = f"https://ark.{region}.volcengine.com/v1"
+                    base_url = f"https://ark.{region}.volces.com/api/v3"
                 else:
-                    base_url = "https://open.volcengineapi.com"
+                    base_url = f"https://ark.{region}.volces.com/api/v3"
             
             # 确保 URL 格式正确
             if not base_url.endswith("/"):
@@ -356,24 +352,24 @@ class VolcanoLLMLoader:
                     "Content-Type": "application/json"
                 }
                 
-                # 构建完整的 URL，REST API 不需要添加路径
+                # 构建完整的 URL，REST API 模式使用 chat/completions 路径
                 url = chat.base_url
+                if not url.endswith("/"):
+                    url += "/"
+                if "chat/completions" not in url:
+                    url += "chat/completions"
                 if not url.startswith("http"):
                     url = f"https://{url}"
                 
-                # 发送一个简单的测试请求，包含必要的 Action 和 Version 参数
+                # 发送一个简单的测试请求，基于用户提供的curl示例
                 test_data = {
-                    "Action": "ChatCompletion",
-                    "Version": "2023-05-01",
-                    "EndpointId": chat.endpoint_id,
-                    "Parameters": {
-                        "messages": [{"role": "user", "content": "测试连接"}],
-                        "max_tokens": 5
-                    }
+                    "model": chat.endpoint_id,
+                    "messages": [{"role": "user", "content": "测试连接"}],
+                    "max_tokens": 5
                 }
                 
                 logger.info(f"发送 REST API 测试请求到: {url}")
-                logger.info(f"测试请求参数: Action={test_data['Action']}, Version={test_data['Version']}, EndpointId={test_data['EndpointId']}")
+                logger.info(f"测试请求参数: model={test_data['model']}, messages={test_data['messages']}")
                 
                 response = requests.post(url, headers=headers, json=test_data)
             
@@ -391,9 +387,9 @@ class VolcanoLLMLoader:
                     error_msg += f"3. endpoint_id 是否正确: 当前值为 '{chat.endpoint_id}'\n"
                     
                     if chat.api_mode == APIMode.OPENAPI:
-                        error_msg += f"OpenAPI 模式下，正确的 base_url 格式应为: https://ark.cn-beijing.volcengine.com/v1/"
+                        error_msg += f"OpenAPI 模式下，正确的 base_url 格式应为: https://ark.cn-beijing.volces.com/api/v3/"
                     else:
-                        error_msg += f"REST API 模式下，正确的 base_url 格式应为: https://open.volcengineapi.com/"
+                        error_msg += f"REST API 模式下，正确的 base_url 格式应为: https://ark.cn-beijing.volces.com/api/v3/"
                     
                     raise RuntimeError(error_msg)
                 else:
