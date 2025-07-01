@@ -29,10 +29,19 @@ class VolcanoChat:
         
         # 如果是 OpenAPI 模式，初始化 OpenAI 客户端
         if api_mode == APIMode.OPENAPI:
+            # 确保URL格式正确，与用户提供的示例完全匹配
+            openai_base_url = base_url
+            # 移除末尾的斜杠(如果有)
+            if openai_base_url.endswith("/"):
+                openai_base_url = openai_base_url[:-1]
+                logger.info(f"为OpenAI客户端移除URL末尾的斜杠: {openai_base_url}")
+            
+            logger.info(f"初始化OpenAI客户端，使用base_url={openai_base_url}")
             self.client = openai.OpenAI(
                 api_key=api_key,
-                base_url=base_url
+                base_url=openai_base_url
             )
+            logger.info("OpenAI客户端初始化完成")
         
         logger.info(f"初始化 VolcanoChat 客户端: endpoint_id={endpoint_id}, base_url={base_url}, api_mode={api_mode.value}")
 
@@ -113,6 +122,7 @@ class VolcanoChat:
                     url = f"https://{url}"
                 
                 logger.info(f"发送 REST API 请求到: {url}")
+                logger.info(f"请求参数: model={request_data['model']}, messages={request_data['messages']}")
                 
                 response = requests.post(url, headers=headers, json=request_data)
                 
@@ -205,6 +215,7 @@ class VolcanoChat:
                     url = f"https://{url}"
                 
                 logger.info(f"发送 REST API 流式请求到: {url}")
+                logger.info(f"请求参数: model={request_data['model']}, messages={request_data['messages']}, stream=True")
                 
                 response = requests.post(url, headers=headers, json=request_data, stream=True)
                 
@@ -234,10 +245,8 @@ class VolcanoLLMLoader:
                 "api_key": ("STRING", {"default": ""}),
             },
             "optional": {
-                "custom_base_url": ("STRING", {
-                    "default": "",
-                    "description": "自定义 API 地址，留空则使用默认地址 (中国北京区域)"
-                }),
+                "region": ("STRING", {"default": "cn-beijing"}),
+                "custom_base_url": ("STRING", {"default": ""}),
             }
         }
     
@@ -246,7 +255,7 @@ class VolcanoLLMLoader:
     FUNCTION = "load_model"
     CATEGORY = "🌋火山引擎/LLM"
     
-    def load_model(self, api_mode: str, endpoint_id: str, api_key: str, custom_base_url: str = ""):
+    def load_model(self, api_mode: str, endpoint_id: str, api_key: str, region: str = "cn-beijing", custom_base_url: str = ""):
         """
         加载火山引擎 LLM 模型
         
@@ -254,6 +263,7 @@ class VolcanoLLMLoader:
             api_mode: API 模式，"OpenAPI" 或 "REST API"
             endpoint_id: 火山引擎端点 ID
             api_key: API 密钥
+            region: 区域，默认为 cn-beijing
             custom_base_url: 自定义基础 URL，如果提供则优先使用
             
         Returns:
@@ -267,28 +277,32 @@ class VolcanoLLMLoader:
             if custom_base_url and custom_base_url.strip():
                 base_url = custom_base_url.strip()
                 # 检查 URL 是否包含必要的域名部分
-                if "volces.com" not in base_url and "volcengine.com" not in base_url:
+                if "volcengine.com" not in base_url:
                     logger.warning(f"自定义 URL 可能不正确: {base_url}")
                     if api_mode_enum == APIMode.OPENAPI:
-                        logger.info("OpenAPI 模式下，正确的 URL 格式应为: https://ark.cn-beijing.volces.com/api/v3")
+                        logger.info("OpenAPI 模式下，正确的 URL 格式应为: https://ark.[region].volcengine.com/v1")
                     else:
-                        logger.info("REST API 模式下，正确的 URL 格式应为: https://ark.cn-beijing.volces.com/api/v3")
+                        logger.info("REST API 模式下，正确的 URL 格式应为: https://open.volcengineapi.com")
             else:
-                # 使用固定的默认基础 URL
+                # 根据 API 模式选择默认的基础 URL
                 if api_mode_enum == APIMode.OPENAPI:
-                    base_url = "https://ark.cn-beijing.volces.com/api/v3"
+                    base_url = f"https://ark.{region}.volces.com/api/v3"
                 else:
-                    base_url = "https://ark.cn-beijing.volces.com/api/v3"
+                    base_url = f"https://ark.{region}.volces.com/api/v3"
             
-            # 确保 URL 格式正确
-            if not base_url.endswith("/"):
-                base_url += "/"
-                
             # 确保 URL 包含协议
             if not base_url.startswith("http"):
                 base_url = "https://" + base_url
+                
+            # 处理URL末尾的斜杠
+            # 根据用户提供的示例，OpenAPI模式下不需要末尾的斜杠
+            if base_url.endswith("/") and api_mode_enum == APIMode.OPENAPI:
+                base_url = base_url[:-1]
+            # REST API模式下可能需要末尾的斜杠
+            elif not base_url.endswith("/") and api_mode_enum == APIMode.REST_API:
+                base_url += "/"
             
-            logger.info(f"加载火山引擎 LLM 模型: endpoint_id={endpoint_id}, api_mode={api_mode}")
+            logger.info(f"加载火山引擎 LLM 模型: endpoint_id={endpoint_id}, region={region}, api_mode={api_mode}")
             
             # 创建 VolcanoChat 实例
             chat = VolcanoChat(endpoint_id, api_key, base_url, api_mode_enum)
@@ -318,32 +332,54 @@ class VolcanoLLMLoader:
             
             # 根据 API 模式选择不同的测试方式
             if chat.api_mode == APIMode.OPENAPI:
-                # 尝试使用 chat.completions.create 进行测试
+                # 直接使用OpenAI客户端进行测试，而不是构建自定义URL
                 try:
-                    # 使用一个非常简短的提示进行测试，只是为了验证连接
+                    logger.info(f"尝试使用OpenAI客户端直接测试连接: {chat.base_url}")
+                    # 使用一个非常简短的提示进行测试
                     test_response = chat.client.chat.completions.create(
                         model=chat.endpoint_id,
                         messages=[{"role": "user", "content": "测试连接"}],
                         max_tokens=5
                     )
-                    logger.info("成功连接到火山引擎 OpenAPI 并获得响应")
+                    logger.info("成功使用OpenAI客户端连接到火山引擎API")
                     return
-                except openai.NotFoundError as e:
-                    logger.warning(f"端点 ID 不存在: {str(e)}")
-                    raise RuntimeError(f"API 端点不存在，请检查 endpoint_id 是否正确: {chat.endpoint_id}")
-                except openai.AuthenticationError as e:
-                    logger.warning(f"认证失败: {str(e)}")
-                    raise RuntimeError(f"API 密钥无效或权限不足，请检查 api_key")
                 except Exception as e:
-                    # 如果上面的方法失败，尝试备用方法
-                    logger.warning(f"使用 chat.completions.create 测试失败: {str(e)}")
-                    logger.info("尝试备用方法测试连接...")
+                    logger.warning(f"使用OpenAI客户端测试连接失败: {str(e)}")
+                    logger.info("尝试使用备用方法测试连接...")
                 
-                # 备用测试方法：直接请求 models 端点
-                response = requests.get(
-                    f"{chat.base_url}models",
-                    headers={"Authorization": f"Bearer {chat.api_key}"}
-                )
+                # 备用测试方法：直接使用requests发送请求
+                # 完全按照用户提供的OpenAPI示例构建URL
+                url = chat.base_url
+                
+                # 移除末尾的斜杠(如果有)
+                if url.endswith("/"):
+                    url = url[:-1]
+                
+                # 添加chat/completions路径
+                url = f"{url}/chat/completions"
+                
+                logger.info(f"备用方法测试连接URL: {url}")
+                logger.info(f"使用的endpoint_id: {chat.endpoint_id}")
+                logger.info(f"使用的api_key: {'*' * (len(chat.api_key) - 4) + chat.api_key[-4:] if len(chat.api_key) > 4 else '*****'}")
+                
+                logger.info(f"测试连接到 OpenAPI 端点: {url}")
+                
+                # 根据用户提供的OpenAPI示例，使用Bearer认证
+                headers = {
+                    "Authorization": f"Bearer {chat.api_key}",
+                    "Content-Type": "application/json"
+                }
+                
+                logger.info("使用Bearer认证方式进行OpenAPI测试")
+                
+                test_data = {
+                    "model": chat.endpoint_id,
+                    "messages": [{"role": "user", "content": "测试连接"}],
+                    "max_tokens": 5
+                }
+                
+                logger.info(f"使用备用方法测试连接，请求URL: {url}")
+                response = requests.post(url, headers=headers, json=test_data)
             else:  # REST API 模式
                 # 构建 REST API 测试请求
                 headers = {
@@ -386,9 +422,9 @@ class VolcanoLLMLoader:
                     error_msg += f"3. endpoint_id 是否正确: 当前值为 '{chat.endpoint_id}'\n"
                     
                     if chat.api_mode == APIMode.OPENAPI:
-                        error_msg += f"OpenAPI 模式下，正确的 base_url 格式应为: https://ark.cn-beijing.volces.com/api/v3/"
+                        error_msg += f"OpenAPI 模式下，正确的 base_url 格式应为: https://ark.cn-beijing.volces.com/api/v3"
                     else:
-                        error_msg += f"REST API 模式下，正确的 base_url 格式应为: https://ark.cn-beijing.volces.com/api/v3/"
+                        error_msg += f"REST API 模式下，正确的 base_url 格式应为: https://ark.cn-beijing.volces.com/api/v3"
                     
                     raise RuntimeError(error_msg)
                 else:
