@@ -113,7 +113,6 @@ class VolcanoChat:
                     url = f"https://{url}"
                 
                 logger.info(f"发送 REST API 请求到: {url}")
-                logger.info(f"请求参数: Action={request_data['Action']}, Version={request_data['Version']}, EndpointId={request_data['EndpointId']}")
                 
                 response = requests.post(url, headers=headers, json=request_data)
                 
@@ -206,7 +205,6 @@ class VolcanoChat:
                     url = f"https://{url}"
                 
                 logger.info(f"发送 REST API 流式请求到: {url}")
-                logger.info(f"请求参数: Action={request_data['Action']}, Version={request_data['Version']}, EndpointId={request_data['EndpointId']}")
                 
                 response = requests.post(url, headers=headers, json=request_data, stream=True)
                 
@@ -236,8 +234,10 @@ class VolcanoLLMLoader:
                 "api_key": ("STRING", {"default": ""}),
             },
             "optional": {
-                "region": ("STRING", {"default": "cn-beijing"}),
-                "custom_base_url": ("STRING", {"default": ""}),
+                "custom_base_url": ("STRING", {
+                    "default": "",
+                    "description": "自定义 API 地址，留空则使用默认地址 (中国北京区域)"
+                }),
             }
         }
     
@@ -246,7 +246,7 @@ class VolcanoLLMLoader:
     FUNCTION = "load_model"
     CATEGORY = "🌋火山引擎/LLM"
     
-    def load_model(self, api_mode: str, endpoint_id: str, api_key: str, region: str = "cn-beijing", custom_base_url: str = ""):
+    def load_model(self, api_mode: str, endpoint_id: str, api_key: str, custom_base_url: str = ""):
         """
         加载火山引擎 LLM 模型
         
@@ -254,7 +254,6 @@ class VolcanoLLMLoader:
             api_mode: API 模式，"OpenAPI" 或 "REST API"
             endpoint_id: 火山引擎端点 ID
             api_key: API 密钥
-            region: 区域，默认为 cn-beijing
             custom_base_url: 自定义基础 URL，如果提供则优先使用
             
         Returns:
@@ -268,18 +267,18 @@ class VolcanoLLMLoader:
             if custom_base_url and custom_base_url.strip():
                 base_url = custom_base_url.strip()
                 # 检查 URL 是否包含必要的域名部分
-                if "volcengine.com" not in base_url:
+                if "volces.com" not in base_url and "volcengine.com" not in base_url:
                     logger.warning(f"自定义 URL 可能不正确: {base_url}")
                     if api_mode_enum == APIMode.OPENAPI:
-                        logger.info("OpenAPI 模式下，正确的 URL 格式应为: https://ark.[region].volcengine.com/v1")
+                        logger.info("OpenAPI 模式下，正确的 URL 格式应为: https://ark.cn-beijing.volces.com/api/v3")
                     else:
-                        logger.info("REST API 模式下，正确的 URL 格式应为: https://open.volcengineapi.com")
+                        logger.info("REST API 模式下，正确的 URL 格式应为: https://ark.cn-beijing.volces.com/api/v3")
             else:
-                # 根据 API 模式选择默认的基础 URL
+                # 使用固定的默认基础 URL
                 if api_mode_enum == APIMode.OPENAPI:
-                    base_url = f"https://ark.{region}.volces.com/api/v3"
+                    base_url = "https://ark.cn-beijing.volces.com/api/v3"
                 else:
-                    base_url = f"https://ark.{region}.volces.com/api/v3"
+                    base_url = "https://ark.cn-beijing.volces.com/api/v3"
             
             # 确保 URL 格式正确
             if not base_url.endswith("/"):
@@ -289,7 +288,7 @@ class VolcanoLLMLoader:
             if not base_url.startswith("http"):
                 base_url = "https://" + base_url
             
-            logger.info(f"加载火山引擎 LLM 模型: endpoint_id={endpoint_id}, region={region}, api_mode={api_mode}")
+            logger.info(f"加载火山引擎 LLM 模型: endpoint_id={endpoint_id}, api_mode={api_mode}")
             
             # 创建 VolcanoChat 实例
             chat = VolcanoChat(endpoint_id, api_key, base_url, api_mode_enum)
