@@ -1,0 +1,265 @@
+{
+  "last_node_id": 4,
+  "last_link_id": 4,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "VolcanoLLMLoader",
+      "pos": [
+        200,
+        200
+      ],
+      "size": {
+        "0": 315,
+        "1": 178
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "api_mode",
+          "type": "string",
+          "link": null,
+          "widget": {
+            "name": "api_mode",
+            "config": [
+              "OpenAPI",
+              "REST API"
+            ]
+          }
+        },
+        {
+          "name": "endpoint_id",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "endpoint_id"
+          }
+        },
+        {
+          "name": "api_key",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "api_key"
+          }
+        },
+        {
+          "name": "region",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "region"
+          }
+        },
+        {
+          "name": "custom_base_url",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "custom_base_url"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "chat",
+          "type": "VOLCANO_CHAT",
+          "links": [
+            1
+          ],
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VolcanoLLMLoader"
+      },
+      "widgets_values": [
+        "OpenAPI",
+        "ep-xxxxxxxx",
+        "",
+        "cn-beijing",
+        ""
+      ]
+    },
+    {
+      "id": 2,
+      "type": "VolcanoLLMPrompt",
+      "pos": [
+        600,
+        200
+      ],
+      "size": {
+        "0": 400,
+        "1": 270
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "chat",
+          "type": "VOLCANO_CHAT",
+          "link": 1
+        },
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "prompt",
+            "config": [
+              "你好，请介绍一下自己。"
+            ]
+          }
+        },
+        {
+          "name": "system_prompt",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "system_prompt",
+            "config": [
+              ""
+            ]
+          }
+        },
+        {
+          "name": "max_tokens",
+          "type": "INT",
+          "link": null,
+          "widget": {
+            "name": "max_tokens"
+          }
+        },
+        {
+          "name": "temperature",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "temperature"
+          }
+        },
+        {
+          "name": "top_p",
+          "type": "FLOAT",
+          "link": null,
+          "widget": {
+            "name": "top_p"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "response",
+          "type": "STRING",
+          "links": [
+            2
+          ],
+          "shape": 3
+        },
+        {
+          "name": "info",
+          "type": "STRING",
+          "links": [
+            3
+          ],
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VolcanoLLMPrompt"
+      },
+      "widgets_values": [
+        "你好，请介绍一下自己。",
+        "",
+        1024,
+        0.7,
+        0.9
+      ]
+    },
+    {
+      "id": 3,
+      "type": "Text Preview",
+      "pos": [
+        1050,
+        150
+      ],
+      "size": {
+        "0": 400,
+        "1": 200
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 2
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "在这里将显示模型的响应文本"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "Text Preview",
+      "pos": [
+        1050,
+        400
+      ],
+      "size": {
+        "0": 400,
+        "1": 200
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 3
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "在这里将显示响应的详细信息（如 token 使用情况）"
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      2,
+      0,
+      "VOLCANO_CHAT"
+    ],
+    [
+      2,
+      2,
+      0,
+      3,
+      0,
+      "STRING"
+    ],
+    [
+      3,
+      2,
+      1,
+      4,
+      0,
+      "STRING"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}
