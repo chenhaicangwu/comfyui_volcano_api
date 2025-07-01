@@ -206,7 +206,7 @@ class TextSegmentDisplay:
         # 限制显示长度
         display_text = text_segment
         if len(display_text) > max_display_length:
-            display_text = display_text[:max_display_length] + "\n\n[内容过长，已截断...]")
+            display_text = display_text[:max_display_length] + "\n\n[内容过长，已截断...]"
         
         output_lines.append(display_text)
         
